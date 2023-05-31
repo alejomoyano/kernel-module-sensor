@@ -6,37 +6,56 @@
 #include <linux/fs.h>
 #include <linux/device.h>
 #include <linux/cdev.h>
+#include <linux/gpio.h> // libreria con la que handleamos los GPIOs
 
-MODULE_LICENSE("GPL");    /*  Licencia del modulo */
+MODULE_LICENSE("GPL"); /*  Licencia del modulo */
 MODULE_DESCRIPTION("Sensor");
 MODULE_AUTHOR("Paul Carter's Gang");
-
 
 static dev_t mm_sensor;
 static struct class *sensor_class;
 static struct cdev c_dev;
 struct device *dev_sensor;
 
-// TODO ->  crear las funciones de fops
+int selector = 0;
+
+// TODO ->  crear las funciones de cambiar
 
 static int sensor_open(struct inode *i, struct file *f)
 {
-    printk(KERN_INFO "Driver: open()\n");
+    printk("Driver Sensores Abierto\n");
     return 0;
 }
 static int sensor_close(struct inode *i, struct file *f)
 {
-    printk(KERN_INFO "Driver: close()\n");
+    printk("Driver Sensores Cerrado\n");
     return 0;
 }
+
 static ssize_t sensor_read(struct file *f, char __user *buf, size_t len, loff_t *off)
 {
-    printk(KERN_INFO "Driver: read()\n");
-    return 0;
+    int flag = 0;
+    printk("Leyendo el sensor %s\n",selector);
+    // deberia colocar en buf lo que lee del GPIO y len el size en bytes
+    // while(flag){
+        // dormirlo un segundo
+    printk("%i\n",gpio_get_value(selector));
+    // }
+    return len; // ver esto, estaba en 0 antes
 }
 static ssize_t sensor_write(struct file *f, const char __user *buf, size_t len, loff_t *off)
 {
-    printk(KERN_INFO "Driver: write()\n");
+    // deberia cambiar el sensor, o sea la variable selector.
+    char input;
+    copy_from_user(&input, buf, len)
+        printk("Cambiando a sensor %s\n", input);
+
+    if (input == '1')
+        selector = 1; // cambiarlo por el numero del GPIO
+    else if (input == '0')
+        selector = 0; // a este tambien
+    else
+        printk("No existe el sensor seleccionado. Ingrese 0 o 1.\n");
     return len;
 }
 
@@ -46,8 +65,7 @@ static struct file_operations fops =
         .open = sensor_open,
         .release = sensor_close,
         .read = sensor_read,
-        .write = sensor_write
-    };
+        .write = sensor_write};
 
 static int __init sensor_init(void) /* Constructor */
 {
@@ -88,6 +106,20 @@ static int __init sensor_init(void) /* Constructor */
         return ret;
     }
 
+    // "pedimos" los pines
+    if (gpio_request(4, "rpi-gpio-4"))
+        printk("Error pidiendo el GPIO\n");
+
+    if (gpio_request(17, "rpi-gpio-17"))
+        printk("Error pidiendo el GPIO\n");
+
+    // seteamos como entrada los pines
+    if (gpio_direction_input(4))
+        printk("Error seteando GPIO como entrada\n");
+
+    if (gpio_direction_input(17))
+        printk("Error seteando GPIO como entrada\n");
+
     return 0;
 }
 
@@ -102,4 +134,3 @@ static void __exit sensor_exit(void) /* Destructor */
 
 module_init(sensor_init);
 module_exit(sensor_exit);
-
