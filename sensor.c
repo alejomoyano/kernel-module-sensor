@@ -57,16 +57,17 @@ static ssize_t sensor_driver_write(struct file *File, const char *user_buffer, s
 
     printk("Se escribio en el driver\n");
 
-    switch(user_buffer){
-        case '17':
-            signal = 17;
-            break;
-        case '4':
-            signal = 4;
-            break;
-        default:
-            printk("GPIO no disponible. Ingrese 17 o 4.\n");
-            break;
+    switch (value)
+    {
+    case '17':
+        signal = 17;
+        break;
+    case '4':
+        signal = 4;
+        break;
+    default:
+        printk("GPIO no disponible. Ingrese 17 o 4.\n");
+        break;
     }
 
     /* calculate data */
