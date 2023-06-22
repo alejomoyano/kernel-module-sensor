@@ -1,36 +1,87 @@
 import matplotlib.pyplot as plt
-import matplotlib.animation as animation
+import os
+from tkinter import Tk, Button, BOTH, TOP, BOTTOM
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+from time import sleep
+from threading import Thread
+
+def change_signal():
+    global signal
+    global driver
+
+    print('estamos leyendo el sensor',signal)
 
 
+    figure.clear()
+    pulses.clear()
+    x.clear()
 
-def rtgraph(interval):
-    global counter
-    global x
+    if signal == 1:
+        signal = 2
+        os.write(driver, b'2')
+    else:
+        signal = 1
+        os.write(driver, b'1')
 
-    pulse = open('/dev/gsensors','r').read()
-    # pulse = open('nose.txt','r').read()
-    # lines = pulse.split('\n')
+        # driver.flush()
+        
 
+def logic():
+    global pulses
+    while 1:
 
-    # for p in lines:
-    if len(pulse) > 0:
-        if pulse == '0': 
-            print(counter)
-            counter = 0
+        pulse = os.read(driver, 1024)
+        decoded = pulse.decode('utf-8')
+
+        # print(decoded)
+        if len(decoded) > 0:
+            pulses.append(decoded)
+        print(decoded)
+
+        x = range(1, len(pulses) + 1)
+
+        figure.clear()
+        if signal == 1:
+            figure.add_subplot(111).step(x,pulses)
         else:
-            counter += 1
-        pulses.append(counter)
-    
+            figure.add_subplot(111).plot(x,pulses)
+
+        canvas.draw()
+        sleep(1)
+
+
+if __name__ == "__main__":
+
+    driver = os.open('/dev/gsensors',os.O_RDWR)
+
+    counter = 0
+    pulses = []
     x = []
-    x = range(1, len(pulses) + 1)
-    subplot.clear()
-    subplot.plot(x, pulses)
 
-counter = 0
-pulses = []
-x = 0
-figure = plt.figure()
-subplot = figure.add_subplot(1,1,1)
+    signal = 1
 
-ani = animation.FuncAnimation(figure, rtgraph, interval=1000)
-plt.show()
+    root = Tk()
+
+    global figure
+    figure = Figure()
+
+    if signal == 1:
+        figure.add_subplot(111).step([],[])
+    else:
+        figure.add_subplot(111).plot([],[])
+
+    canvas = FigureCanvasTkAgg(figure, master=root) 
+    canvas.draw()
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack(side=TOP, fill=BOTH, expand=1)
+
+    button = Button(master=root, text="Change", command=change_signal)
+    button.pack(side=BOTTOM)
+
+    rep_thread = Thread(target=logic) 
+    rep_thread.daemon = True
+    rep_thread.start()
+
+
+    root.mainloop()
